@@ -26,20 +26,29 @@ const server = http.createServer((req, res) => {
   let safePath = path.normalize(decodeURIComponent(urlPath)).replace(/^(\.\.[\/\\])+/, '');
   if (safePath === '/' || safePath === '\\') safePath = '/index.html';
 
-  let filePath = path.join(__dirname, safePath);
+  const distDir = path.join(__dirname, 'dist');
+  const useDist = fs.existsSync(path.join(distDir, 'index.html'));
+  const rootDir = useDist ? distDir : __dirname;
+
+  let filePath = path.join(rootDir, safePath);
 
   // Check if file exists directly
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     const publicPath = path.join(__dirname, 'public', safePath);
     if (fs.existsSync(publicPath) && fs.statSync(publicPath).isFile()) {
       filePath = publicPath;
+    } else {
+      const rootPath = path.join(__dirname, safePath);
+      if (fs.existsSync(rootPath) && fs.statSync(rootPath).isFile()) {
+        filePath = rootPath;
+      }
     }
   }
 
   // SPA fallback for HTML client-side routes
   if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     if (!path.extname(safePath)) {
-      filePath = path.join(__dirname, 'index.html');
+      filePath = path.join(rootDir, 'index.html');
     } else {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=UTF-8' });
       res.end('404 Not Found');
